@@ -6,10 +6,21 @@ import traceback
 import os
 import pandas as pd
 import numpy as np
+from pymongo import MongoClient
 from web3 import Web3, HTTPProvider
+from dotenv import load_dotenv
+load_dotenv()
 
+GETH_RPC_URL = os.getenv("GETH_RPC_URL")
+GETH_RPC_PORT = os.getenv("GETH_RPC_PORT")
+web3 = Web3(HTTPProvider(GETH_RPC_URL + ':' + GETH_RPC_PORT))
 
-web3 = Web3(HTTPProvider('http://localhost:8545'))
+MONGO_USER = os.getenv("MONGO_USER")
+MONGO_PWD = os.getenv("MONGO_PWD")
+SERVER = os.getenv("SERVER")
+DBNAME = os.getenv("DBNAME")
+mongo_url = 'mongodb://' + MONGO_USER + ':' + MONGO_PWD + '@' + SERVER + ':27017/' + DBNAME
+client = MongoClient(mongo_url)
 
 ### These are the threholds used for % blocks accepting to define the recommended gas prices. can be edited here if desired
 
@@ -81,6 +92,24 @@ def write_to_json(gprecs, prediction_table):
 
         with open(filepath_prediction_table, 'w') as outfile:
             outfile.write(prediction_tableout)
+
+    except Exception as e:
+        print(e)
+
+def write_to_mongo(protocol, gprecs):
+    """write to mongo"""
+    try:      
+        db = getattr(client, DBNAME)
+        gas_oracle = {
+            'protocol': protocol,
+            'safeLow' : gprecs['safeLow'],
+            'standard' : gprecs['standard'],
+            'fast' : gprecs['fast'],
+            'fastest' : gprecs['fastest'],
+            'blockTime' : gprecs['block_time'],
+            'blockNumber' : gprecs['blockNum']
+        }
+        result=db.gasoracle.insert_one(gas_oracle)
 
     except Exception as e:
         print(e)
@@ -228,6 +257,9 @@ def master_control():
             #get gpRecs
             gprecs = get_gasprice_recs (predictiondf, block_time, block)
             print(gprecs)
+
+            #write gpRecs to mongo
+            write_to_mongo('Ethereum', gprecs)
 
             #every block, write gprecs, predictions    
             write_to_json(gprecs, predictiondf)
