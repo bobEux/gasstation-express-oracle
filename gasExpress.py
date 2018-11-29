@@ -6,16 +6,29 @@ import traceback
 import os
 import pandas as pd
 import numpy as np
+from pymongo import MongoClient
 from web3 import Web3, HTTPProvider
+from dotenv import load_dotenv
+load_dotenv()
 
+GETH_RPC_URL = os.getenv("GETH_RPC_URL")
+GETH_RPC_PORT = os.getenv("GETH_RPC_PORT")
+web3 = Web3(HTTPProvider(GETH_RPC_URL + ':' + GETH_RPC_PORT))
 
-web3 = Web3(HTTPProvider('http://localhost:8545'))
+MONGO_USER = os.getenv("MONGO_USER")
+MONGO_PWD = os.getenv("MONGO_PWD")
+SERVER = os.getenv("SERVER")
+DBNAME = os.getenv("DBNAME")
+mongo_url = 'mongodb://' + MONGO_USER + ':' + MONGO_PWD + '@' + SERVER + ':27017/' + DBNAME
+client = MongoClient(mongo_url)
 
 ### These are the threholds used for % blocks accepting to define the recommended gas prices. can be edited here if desired
 
 SAFELOW = 35
 STANDARD = 60
 FAST = 90
+
+protocol = 'Ethereum'
 
 class Timers():
     """
@@ -68,19 +81,20 @@ class CleanBlock():
         data = {0:{'block_number':self.block_number, 'blockhash':self.blockhash, 'time_mined':self.time_mined, 'mingasprice':self.mingasprice}}
         return pd.DataFrame.from_dict(data, orient='index')
 
-def write_to_json(gprecs, prediction_table):
-    """write json data"""
-    try:
-        prediction_table['gasprice'] = prediction_table['gasprice']/10
-        prediction_tableout = prediction_table.to_json(orient='records')
-        filepath_gprecs = 'ethgasAPI.json'
-        filepath_prediction_table = 'predictTable.json'
-        
-        with open(filepath_gprecs, 'w') as outfile:
-            json.dump(gprecs, outfile)
-
-        with open(filepath_prediction_table, 'w') as outfile:
-            outfile.write(prediction_tableout)
+def write_to_mongo(protocol, gprecs):
+    """write to mongo"""
+    try:      
+        db = getattr(client, DBNAME)
+        gas_oracle = {
+            'protocol': protocol,
+            'safeLow' : gprecs['safeLow'],
+            'standard' : gprecs['standard'],
+            'fast' : gprecs['fast'],
+            'fastest' : gprecs['fastest'],
+            'blockTime' : gprecs['block_time'],
+            'blockNumber' : gprecs['blockNum']
+        }
+        result=db.gasoracle.insert_one(gas_oracle)
 
     except Exception as e:
         print(e)
@@ -229,8 +243,8 @@ def master_control():
             gprecs = get_gasprice_recs (predictiondf, block_time, block)
             print(gprecs)
 
-            #every block, write gprecs, predictions    
-            write_to_json(gprecs, predictiondf)
+            #write gpRecs to mongo
+            write_to_mongo(protocol, gprecs)
             return True
 
         except: 
