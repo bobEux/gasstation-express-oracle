@@ -8,8 +8,6 @@ import pandas as pd
 import numpy as np
 from pymongo import MongoClient
 from web3 import Web3, HTTPProvider
-from dotenv import load_dotenv
-load_dotenv()
 
 GETH_RPC_URL = os.getenv("GETH_RPC_URL")
 GETH_RPC_PORT = os.getenv("GETH_RPC_PORT")
