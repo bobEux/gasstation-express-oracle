@@ -28,6 +28,8 @@ SAFELOW = 35
 STANDARD = 60
 FAST = 90
 
+protocol = 'Ethereum'
+
 class Timers():
     """
     class to keep track of time relative to network block
@@ -78,23 +80,6 @@ class CleanBlock():
     def to_dataframe(self):
         data = {0:{'block_number':self.block_number, 'blockhash':self.blockhash, 'time_mined':self.time_mined, 'mingasprice':self.mingasprice}}
         return pd.DataFrame.from_dict(data, orient='index')
-
-def write_to_json(gprecs, prediction_table):
-    """write json data"""
-    try:
-        prediction_table['gasprice'] = prediction_table['gasprice']/10
-        prediction_tableout = prediction_table.to_json(orient='records')
-        filepath_gprecs = 'ethgasAPI.json'
-        filepath_prediction_table = 'predictTable.json'
-        
-        with open(filepath_gprecs, 'w') as outfile:
-            json.dump(gprecs, outfile)
-
-        with open(filepath_prediction_table, 'w') as outfile:
-            outfile.write(prediction_tableout)
-
-    except Exception as e:
-        print(e)
 
 def write_to_mongo(protocol, gprecs):
     """write to mongo"""
@@ -259,10 +244,7 @@ def master_control():
             print(gprecs)
 
             #write gpRecs to mongo
-            write_to_mongo('Ethereum', gprecs)
-
-            #every block, write gprecs, predictions    
-            write_to_json(gprecs, predictiondf)
+            write_to_mongo(protocol, gprecs)
             return True
 
         except: 
