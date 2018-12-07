@@ -58,4 +58,4 @@ workflows:
           filters:
             branches:
               only:
-                  - feature/add-circle-ci-process
+                  - feature/add-build-process
