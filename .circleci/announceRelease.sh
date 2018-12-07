@@ -22,4 +22,4 @@ cat <<EOM
 EOM
 )
 
-curl -X POST --data-urlencode payload="$payload" "$TEST_SLACK_URL"
+curl -X POST --data-urlencode payload="$payload" "$SLACK_WEBHOOK_URL"
