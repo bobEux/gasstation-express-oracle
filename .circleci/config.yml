@@ -120,7 +120,7 @@ workflows:
           filters:
             branches:
               only:
-                  - feature/add-build-process
+                  - develop
       - publish-prod:
           requires:
              - build
