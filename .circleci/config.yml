@@ -27,7 +27,7 @@ jobs:
       - checkout
       - run:
           name: Install AWS CLI
-          command: pip install awscli
+          command: pip install awscli --upgrade --user
       - run:
           name: Create .pypirc and append CircleCI build number as version
           command: |
@@ -70,6 +70,9 @@ jobs:
       - image: circleci/python:3.6.7
     steps:
       - checkout
+      - run:
+          name: Install AWS CLI
+          command: pip install awscli --upgrade --user
       - run:
           name: Create .pypirc and append CircleCI build number as version
           command: |
