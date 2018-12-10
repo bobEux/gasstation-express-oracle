@@ -1,0 +1,98 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/gasstation-express-oracle
+    docker:
+      - image: circleci/python:3.6.7
+    steps:
+      - checkout
+      - run:
+          name: Create .pypirc
+          command: chmod +x .circleci/pypirc.sh && .circleci/pypirc.sh
+      - run:
+          name: Install requirements
+          command: |
+            python3 -m venv env
+            source ./env/bin/activate
+            pip3 install -r requirements.txt
+      - store_artifacts:
+          path: ./reports/
+          destination: reports
+
+  publish-staging:
+    working_directory: ~/gasstation-express-oracle
+    docker:
+      - image: circleci/python:3.6.7
+    steps:
+      - checkout
+      - run:
+          name: Create .pypirc
+          command: |
+            chmod +x .circleci/pypirc.sh && .circleci/pypirc.sh
+            touch version.py
+            echo "__version__ = 'staging-0.1.$CIRCLE_BUILD_NUM'" > version.py
+      - run:
+          name: Install requirements
+          command: |
+            python3 -m venv env
+            source ./env/bin/activate
+            pip3 install -r requirements.txt
+      - run:
+          name: Append circleCI build number to version
+          command: |
+            git config user.email "devops@pillar.io"
+            git config user.name "Issabot"
+      - run:
+          name: Publish Package to Artifactory
+          command: |
+            python3 setup.py sdist upload -r local
+            chmod +x .circleci/announceRelease.sh && .circleci/announceRelease.sh "gassstation-express-oracle-staging" "gassstation-express-oracle-staging:$CIRCLE_BUILD_NUM"
+
+  publish-prod:
+    working_directory: ~/gasstation-express-oracle
+    docker:
+      - image: circleci/python:3.6.7
+    steps:
+      - checkout
+      - run:
+          name: Create .pypirc
+          command: |
+            chmod +x .circleci/pypirc.sh && .circleci/pypirc.sh
+            touch version.py
+            echo "__version__ = '0.1.$CIRCLE_BUILD_NUM'" > version.py
+      - run:
+          name: Install requirements
+          command: |
+            python3 -m venv env
+            source ./env/bin/activate
+            pip3 install -r requirements.txt
+      - run:
+          name: Append circleCI build number to version
+          command: |
+            git config user.email "devops@pillar.io"
+            git config user.name "Issabot"
+      - run:
+          name: Publish Package to Artifactory
+          command: |
+            python3 setup.py sdist upload -r local
+            chmod +x .circleci/announceRelease.sh && .circleci/announceRelease.sh "gassstation-express-oracle" "gassstation-express-oracle:$CIRCLE_BUILD_NUM"
+
+workflows:
+  version: 2
+  test_and_publish:
+    jobs:
+      - build
+      - publish-staging:
+          requires:
+             - build
+          filters:
+            branches:
+              only:
+                  - develop
+      - publish-prod:
+          requires:
+             - build
+          filters:
+            branches:
+              only:
+                  - master
