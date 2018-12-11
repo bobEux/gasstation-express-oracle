@@ -19,6 +19,51 @@ jobs:
           path: ./reports/
           destination: reports
 
+  publish-development:
+    working_directory: ~/gasstation-express-oracle
+    docker:
+      - image: circleci/python:3.6.7
+    steps:
+      - checkout
+      - run:
+          name: Install AWS CLI
+          command: pip install awscli --upgrade --user
+      - run:
+          name: Create .pypirc and append CircleCI build number as version
+          command: |
+            chmod +x .circleci/pypirc.sh && .circleci/pypirc.sh
+            touch version.py
+            echo "__version__ = '0.1.$CIRCLE_BUILD_NUM-staging'" > version.py
+      - run:
+          name: Install requirements
+          command: |
+            python3 -m venv env
+            source ./env/bin/activate
+            pip3 install -r requirements.txt
+      - run:
+          name: Git config
+          command: |
+            git config user.email "devops@pillar.io"
+            git config user.name "Issabot"
+      - run:
+          name: Publish Package to Artifactory
+          command: |
+            python3 setup.py sdist upload -r local
+            chmod +x .circleci/announceRelease.sh && .circleci/announceRelease.sh "gassstation-express-oracle-staging" "gassstation-express-oracle-staging:$CIRCLE_BUILD_NUM"
+      - run:
+          name: Push txt file to S3 bucket
+          command: |
+            touch gasstation-express-oracle.txt
+            echo "gasstation-express-oracle@0.1.$CIRCLE_BUILD_NUM-staging" > gasstation-express-oracle.txt
+            export AWS_ACCESS_KEY_ID=$STAGING_AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$STAGING_AWS_SECRET_ACCESS_KEY
+            /home/circleci/.local/bin/aws s3 cp gasstation-express-oracle.txt $STAGING_RELEASE_BUCKET
+      - run:
+          name: Announce Deployment
+          command: |
+            chmod +x .circleci/announceDeployment.sh
+            .circleci/announceDeployment.sh "gasstation-express-oracle" "Staging" "$(cat ./gasstation-express-oracle.txt)"
+
   publish-staging:
     working_directory: ~/gasstation-express-oracle
     docker:
@@ -114,6 +159,14 @@ workflows:
   test_and_publish:
     jobs:
       - build
+      - publish-development:
+          requires:
+             - build
+          filters:
+            branches:
+              ignore:
+                  - develop
+                  - master
       - publish-staging:
           requires:
              - build
