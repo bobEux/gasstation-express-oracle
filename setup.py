@@ -11,6 +11,7 @@ setuptools.setup(
     description="gasstation-express-oracle package to jfrog ",
     url="https://pillarproject.jfrog.io/pillarproject/api/pypi/pypi",
     packages=setuptools.find_packages(),
+    data_files=[('script', ['gasExpress.py'])],
     classifiers=[
         "Programming Language :: Python :: 3",
     ],
