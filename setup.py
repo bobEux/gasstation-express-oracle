@@ -3,7 +3,7 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-exec(open('/home/circleci/gasstation-express-oracle/version.py').read())
+exec(open('./version.py').read())
 setuptools.setup(
     name="gasstation-express-oracle",
     version=__version__,
