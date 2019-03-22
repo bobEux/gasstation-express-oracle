@@ -137,7 +137,7 @@ workflows:
           filters:
             branches:
               only:
-                  - fix/change-version-path
+                  - develop
       - package-publish-prod:
           requires:
              - build
