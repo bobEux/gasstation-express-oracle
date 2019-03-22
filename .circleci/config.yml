@@ -19,18 +19,38 @@ jobs:
           path: ./reports/
           destination: reports
 
-  publish-staging:
+  whitesource:
+    working_directory: ~/gasstation-express-oracle
+    docker:
+      - image: circleci/openjdk:8-node-browsers
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/gasstation-express-oracle/workspace
+      - run :
+          name: Setup WhiteSource
+          command: curl -LJO https://github.com/whitesource/fs-agent-distribution/raw/master/standAlone/wss_agent.sh
+      - run:
+          name: execute whitesource
+          command: |
+            cd .whitesource/
+            chmod +x wss_agent.sh && ./wss_agent.sh -apiKey $WHITESOURCE_API_KEY -c ./whitesource-fs-agent.config  -project gasstation-express-oracle -f files.list
+
+  package-publish-qa:
     working_directory: ~/gasstation-express-oracle
     docker:
       - image: circleci/python:3.6.7
     steps:
       - checkout
       - run:
-          name: Create .pypirc
+          name: Install AWS CLI
+          command: pip install awscli --upgrade --user
+      - run:
+          name: Create .pypirc and append CircleCI build number as version
           command: |
             chmod +x .circleci/pypirc.sh && .circleci/pypirc.sh
             touch version.py
-            echo "__version__ = 'staging-0.1.$CIRCLE_BUILD_NUM'" > version.py
+            echo "__version__ = '0.1.$CIRCLE_BUILD_NUM-qa'" > version.py
       - run:
           name: Install requirements
           command: |
@@ -38,7 +58,7 @@ jobs:
             source ./env/bin/activate
             pip3 install -r requirements.txt
       - run:
-          name: Append circleCI build number to version
+          name: Git config
           command: |
             git config user.email "devops@pillar.io"
             git config user.name "Issabot"
@@ -46,16 +66,32 @@ jobs:
           name: Publish Package to Artifactory
           command: |
             python3 setup.py sdist upload -r local
-            chmod +x .circleci/announceRelease.sh && .circleci/announceRelease.sh "gassstation-express-oracle-staging" "gassstation-express-oracle-staging:$CIRCLE_BUILD_NUM"
+            chmod +x .circleci/announceRelease.sh && .circleci/announceRelease.sh "gassstation-express-oracle-qa" "gassstation-express-oracle-qa:$CIRCLE_BUILD_NUM"
+      - run:
+          name: Push txt file to S3 bucket
+          command: |
+            touch gasstation-express-oracle.txt
+            echo "gasstation-express-oracle@0.1.$CIRCLE_BUILD_NUM-qa" > gasstation-express-oracle.txt
+            export AWS_ACCESS_KEY_ID=$STAGING_AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$STAGING_AWS_SECRET_ACCESS_KEY
+            /home/circleci/.local/bin/aws s3 cp gasstation-express-oracle.txt $QA_RELEASE_BUCKET
+      - run:
+          name: Announce Deployment
+          command: |
+            chmod +x .circleci/announceDeployment.sh
+            .circleci/announceDeployment.sh "gasstation-express-oracle" "QA" "$(cat ./gasstation-express-oracle.txt)"
 
-  publish-prod:
+  package-publish-prod:
     working_directory: ~/gasstation-express-oracle
     docker:
       - image: circleci/python:3.6.7
     steps:
       - checkout
       - run:
-          name: Create .pypirc
+          name: Install AWS CLI
+          command: pip install awscli --upgrade --user
+      - run:
+          name: Create .pypirc and append CircleCI build number as version
           command: |
             chmod +x .circleci/pypirc.sh && .circleci/pypirc.sh
             touch version.py
@@ -67,7 +103,7 @@ jobs:
             source ./env/bin/activate
             pip3 install -r requirements.txt
       - run:
-          name: Append circleCI build number to version
+          name: Git config
           command: |
             git config user.email "devops@pillar.io"
             git config user.name "Issabot"
@@ -76,20 +112,33 @@ jobs:
           command: |
             python3 setup.py sdist upload -r local
             chmod +x .circleci/announceRelease.sh && .circleci/announceRelease.sh "gassstation-express-oracle" "gassstation-express-oracle:$CIRCLE_BUILD_NUM"
+      - run:
+          name: Push txt file to S3 bucket
+          command: |
+            touch gasstation-express-oracle.txt
+            echo "gasstation-express-oracle@0.1.$CIRCLE_BUILD_NUM" > gasstation-express-oracle.txt
+            export AWS_ACCESS_KEY_ID=$PRODUCTION_AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$PRODUCTION_AWS_SECRET_ACCESS_KEY
+            /home/circleci/.local/bin/aws s3 cp gasstation-express-oracle.txt $PRODUCTION_RELEASE_BUCKET
+      - run:
+          name: Announce Deployment
+          command: |
+            chmod +x .circleci/announceDeployment.sh
+            .circleci/announceDeployment.sh "gasstation-express-oracle" "Production" "$(cat ./gasstation-express-oracle.txt)"
 
 workflows:
   version: 2
   test_and_publish:
     jobs:
       - build
-      - publish-staging:
+      - package-publish-qa:
           requires:
              - build
           filters:
             branches:
               only:
                   - develop
-      - publish-prod:
+      - package-publish-prod:
           requires:
              - build
           filters:
