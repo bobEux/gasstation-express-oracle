@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: ~/gasstation-express-oracle
     docker:
-      - image: circleci/python:3.6.7
+      - image: circleci/python:3.5.3
     steps:
       - checkout
       - run:
@@ -39,7 +39,7 @@ jobs:
   package-publish-qa:
     working_directory: ~/gasstation-express-oracle
     docker:
-      - image: circleci/python:3.6.7
+      - image: circleci/python:3.5.3
     steps:
       - checkout
       - run:
@@ -84,7 +84,7 @@ jobs:
   package-publish-prod:
     working_directory: ~/gasstation-express-oracle
     docker:
-      - image: circleci/python:3.6.7
+      - image: circleci/python:3.5.3
     steps:
       - checkout
       - run:
