@@ -3,20 +3,20 @@ import sys
 import json
 import math
 import traceback
-import os
 import pandas as pd
 import numpy as np
 from pymongo import MongoClient
 from web3 import Web3, HTTPProvider
 
-GETH_RPC_URL = os.getenv("GETH_RPC_URL")
-GETH_RPC_PORT = os.getenv("GETH_RPC_PORT")
+config = json.load(open('config.json'))
+GETH_RPC_URL = config['geth']['url']
+GETH_RPC_PORT = config['geth']['port']
 web3 = Web3(HTTPProvider(GETH_RPC_URL + ':' + GETH_RPC_PORT))
 
-MONGO_USER = os.getenv("MONGO_USER")
-MONGO_PWD = os.getenv("MONGO_PWD")
-SERVER = os.getenv("SERVER")
-DBNAME = os.getenv("DBNAME")
+MONGO_USER = config['mongo']['user']
+MONGO_PWD = config['mongo']['pw']
+SERVER = config['mongo']['url']
+DBNAME = config['mongo']['db']
 mongo_url = 'mongodb://' + MONGO_USER + ':' + MONGO_PWD + '@' + SERVER + ':27017/' + DBNAME
 client = MongoClient(mongo_url)
 
