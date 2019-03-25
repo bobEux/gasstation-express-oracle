@@ -92,7 +92,7 @@ def write_to_mongo(protocol, gprecs):
             'blockTime' : gprecs['block_time'],
             'blockNumber' : gprecs['blockNum']
         }
-        result=db.gasoracle.insert_one(gas_oracle)
+        result=db.gasoracles.insert_one(gas_oracle)
 
     except Exception as e:
         print(e)
