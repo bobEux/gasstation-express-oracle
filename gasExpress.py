@@ -10,8 +10,8 @@ from web3 import Web3, HTTPProvider
 
 config = json.load(open('config.json'))
 GETH_RPC_URL = config['geth']['url']
-GETH_RPC_PORT = config['geth']['port']
-web3 = Web3(HTTPProvider(GETH_RPC_URL + ':' + GETH_RPC_PORT))
+# GETH_RPC_PORT = config['geth']['port']
+web3 = Web3(HTTPProvider(GETH_RPC_URL))
 
 MONGO_USER = config['mongo']['user']
 MONGO_PWD = config['mongo']['pw']
