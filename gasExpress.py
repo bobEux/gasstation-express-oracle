@@ -14,7 +14,6 @@ GETH_RPC_URL = config['geth']['url']
 web3 = Web3(HTTPProvider(GETH_RPC_URL))
 
 dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
-table = dynamodb.Table('Movies')
 
 ### These are the threholds used for % blocks accepting to define the recommended gas prices. can be edited here if desired
 
