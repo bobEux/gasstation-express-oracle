@@ -1,3 +1,4 @@
+import boto3
 import time
 import sys
 import json
@@ -5,7 +6,6 @@ import math
 import traceback
 import pandas as pd
 import numpy as np
-from pymongo import MongoClient
 from web3 import Web3, HTTPProvider
 
 config = json.load(open('config.json'))
@@ -13,12 +13,8 @@ GETH_RPC_URL = config['geth']['url']
 # GETH_RPC_PORT = config['geth']['port']
 web3 = Web3(HTTPProvider(GETH_RPC_URL))
 
-MONGO_USER = config['mongo']['user']
-MONGO_PWD = config['mongo']['pw']
-SERVER = config['mongo']['url']
-DBNAME = config['mongo']['db']
-mongo_url = 'mongodb://' + MONGO_USER + ':' + MONGO_PWD + '@' + SERVER + ':27017/' + DBNAME
-client = MongoClient(mongo_url)
+dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
+table = dynamodb.Table('Movies')
 
 ### These are the threholds used for % blocks accepting to define the recommended gas prices. can be edited here if desired
 
@@ -79,10 +75,10 @@ class CleanBlock():
         data = {0:{'block_number':self.block_number, 'blockhash':self.blockhash, 'time_mined':self.time_mined, 'mingasprice':self.mingasprice}}
         return pd.DataFrame.from_dict(data, orient='index')
 
-def write_to_mongo(protocol, gprecs):
-    """write to mongo"""
+def write_to_dynamodb(protocol, gprecs):
+    """write to dynamodb"""
     try:
-        db = getattr(client, DBNAME)
+        table = dynamodb.Table('gas_station')
         gas_oracle = {
             'protocol': protocol,
             'safeLow' : gprecs['safeLow'],
@@ -92,7 +88,7 @@ def write_to_mongo(protocol, gprecs):
             'blockTime' : gprecs['block_time'],
             'blockNumber' : gprecs['blockNum']
         }
-        result=db.gasoracles.insert_one(gas_oracle)
+        table.put_item(gas_oracle)
 
     except Exception as e:
         print(e)
